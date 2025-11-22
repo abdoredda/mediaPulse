@@ -24,7 +24,6 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // You can centralize 401 handling here if needed
     return Promise.reject(error);
   }
 );

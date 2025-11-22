@@ -3,31 +3,33 @@ import HorizontalNavbar from "@/components/ui/HorizontalNavbar";
 import VerticalNavbar from "@/components/ui/VerticalNavbar";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-// Placeholder auth hook. Replace with your real logic.
-function useAuth() {
-  // Replace with your actual auth state (e.g., from context, cookies, etc.)
-  const isAuthenticated = true; // Set to true to simulate logged-in
-  return { isAuthenticated };
-}
+import { useAuth } from "@/context/AuthContext";
+import WaveformLoader from "@/components/ui/loading/WaveformLoader";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       router.replace("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, router]);
+
+  if (isLoading) {
+    return <WaveformLoader />;
+  }
 
   if (!isAuthenticated) {
-    // Optionally show a loading spinner or nothing while redirecting
     return null;
   }
 
   return (
     <>
-      <HorizontalNavbar userName='Abdelrahman' />
+      <HorizontalNavbar
+        userName={user?.name || "User"}
+        avatarUrl={user?.avatar}
+      />
       <main className=''>
         <div className='flex'>
           <VerticalNavbar />

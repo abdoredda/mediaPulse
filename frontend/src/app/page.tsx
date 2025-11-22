@@ -25,7 +25,7 @@ export default function HomePage() {
           <p>This is a modal. You can put any content here.</p>
         </div>
       </Modal>
-      <Skeleton width={210} height={18} rounded animation={"wave"} />
+      {/* <Skeleton width={210} height={18} rounded animation={"wave"} /> */}
 
       <button onClick={() => setOpen((p) => !p)}>ClickMe</button>
     </div>
