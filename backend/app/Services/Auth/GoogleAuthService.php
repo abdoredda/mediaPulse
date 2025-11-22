@@ -2,6 +2,7 @@
 
 namespace App\Services\Auth;
 
+use App\Dtos\Auth\DtoGoogleUser;
 use Google_Client;
 use Google_Service_Oauth2;
 
@@ -47,6 +48,8 @@ class GoogleAuthService
 
         // Fetch user info
         $oauth2 = new Google_Service_Oauth2($client);
-        return [$oauth2->userinfo->get(), $token];
+        $googleUser = $oauth2->userinfo->get();
+
+        return [DtoGoogleUser::fromGoogleUser($googleUser), $token];
     }
 }
