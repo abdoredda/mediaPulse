@@ -1,76 +1,40 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Auth;
 
+use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\GoogleAuthService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class GoogleAuthController extends Controller
 {
-    private $scope = [
-        'openid',
-        'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/youtube.readonly',
-        'https://www.googleapis.com/auth/yt-analytics.readonly',
-    ];
+    private GoogleAuthService $googleAuth;
 
-    private function client()
+    public function __construct(GoogleAuthService $googleAuth)
     {
-        $client = new \Google_Client();
-        $client->setAuthConfig(storage_path('app/google/client_secret.json'));
-        $client->setAccessType('offline'); // gets refresh token
-        $client->setPrompt('consent');      // always ask for permission
-        $client->setRedirectUri(url('/auth/google/callback'));
-        $client->setScopes($this->scope);
-
-        return $client;
+        $this->googleAuth = $googleAuth;
     }
 
     public function redirect()
     {
-        $authUrl = $this->client()->createAuthUrl();
-        return redirect()->away($authUrl);
+        return redirect()->away($this->googleAuth->getAuthUrl());
     }
 
     public function callback(Request $request)
     {
         if (!$request->code) {
-            return response()->json([
-                'error' => 'No authorization code returned!'
-            ], 400); // Bad Request
+            return redirect('http://localhost:3000/login?error=' . urlencode('Login cancelled.'));
         }
-
-        $client = $this->client();
 
         try {
-            // Exchange code for access token
-            $token = $client->fetchAccessTokenWithAuthCode($request->code);
+            [$googleUser, $token] = $this->googleAuth->fetchUser($request->code);
         } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Failed to fetch access token',
-                'message' => $e->getMessage()
-            ], 500);
-        }
-
-        // Set access token to client
-        $client->setAccessToken($token);
-
-        // Fetch Google user info
-        $oauth2 = new \Google_Service_Oauth2($client);
-        $googleUser = $oauth2->userinfo->get();
-
-        // Validate scopes
-        $definedScope = $this->scope;
-        $receivedScope = explode(' ', $token['scope']);
-        $missingScopes = array_diff($definedScope, $receivedScope);
-        // dd($receivedScope);
-        if (!empty($missingScopes)) {
-            return response()->json([
-                'error' => 'Missing required permissions',
-                'missing_scopes' => $missingScopes
-            ], 403); // Forbidden
+            $errorMessage = 'Authentication failed. Please try again.';
+            if (str_contains($e->getMessage(), 'Missing required scopes')) {
+                $errorMessage = 'To use MediaPulse, you must grant all requested permissions.';
+            }
+            return redirect('http://localhost:3000/login?error=' . urlencode($errorMessage));
         }
 
         $user = User::updateOrCreate(
@@ -79,13 +43,13 @@ class GoogleAuthController extends Controller
                 'name' => $googleUser->name,
                 'email' => $googleUser->email,
                 'google_access_token' => $token['access_token'] ?? null,
-                'google_refresh_token' => $token['refresh_token'] ?? null
+                'google_refresh_token' => $token['refresh_token'] ?? null,
+                'avatar' => $googleUser->picture,
             ]
         );
 
-        return response()->json([
-            'message' => 'User logged in successfully',
-            'user' => $user
-        ], 200);
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return redirect('http://localhost:3000/auth/callback?token=' . $token);
     }
 }
