@@ -5,6 +5,7 @@ namespace App\Services\Auth;
 use App\Dtos\Auth\DtoGoogleUser;
 use Google_Client;
 use Google_Service_Oauth2;
+use Google\Service\YouTube;
 
 class GoogleAuthService
 {
