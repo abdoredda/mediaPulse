@@ -33,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <main className=''>
         <div className='flex'>
           <VerticalNavbar />
-          <section className='flex-1'>{children}</section>
+          <section className='flex-1 p-6'>{children}</section>
         </div>
       </main>
     </>
